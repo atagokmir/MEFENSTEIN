@@ -40,4 +40,4 @@ Kontroller:
 - 1,2 - Silah değiştirme
 - ESC - Duraklat/Menü
 
-iyi eğlenceler :)
+iyi eğlenceler :) merhaba
