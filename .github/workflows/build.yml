@@ -42,9 +42,9 @@ jobs:
           PYEOF
           iconutil -c icns icon.iconset -o resources/icons/icon.icns
 
-      - name: Build macOS binary
+      - name: Build macOS app bundle
         run: |
-          pyinstaller --onefile --windowed \
+          pyinstaller --windowed \
             --name MEFENSTEIN \
             --icon resources/icons/icon.icns \
             --add-data "resources:resources" \
@@ -52,11 +52,26 @@ jobs:
             --add-data "settings.py:." \
             main.py
 
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "MEFENSTEIN" \
+            --volicon "resources/icons/icon.icns" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 128 \
+            --icon "MEFENSTEIN.app" 150 180 \
+            --hide-extension "MEFENSTEIN.app" \
+            --app-drop-link 450 180 \
+            "MEFENSTEIN-macOS.dmg" \
+            "dist/"
+
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: MEFENSTEIN-macOS
-          path: dist/MEFENSTEIN
+          path: MEFENSTEIN-macOS.dmg
 
   build-windows:
     runs-on: windows-latest
@@ -95,7 +110,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev
+          sudo apt-get install -y python3-pip libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev fuse libfuse2
 
       - name: Install Python dependencies
         run: pip install pygame pyinstaller
@@ -109,11 +124,45 @@ jobs:
             --add-data "settings.py:." \
             main.py
 
+      - name: Create AppImage
+        run: |
+          # AppImage yapısını oluştur
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+          cp dist/MEFENSTEIN AppDir/usr/bin/MEFENSTEIN
+          cp resources/icons/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/mefenstein.png
+          cp resources/icons/icon.png AppDir/mefenstein.png
+
+          # .desktop dosyası
+          cat > AppDir/mefenstein.desktop << 'EOF'
+          [Desktop Entry]
+          Name=MEFENSTEIN
+          Comment=Cehennemden Kaçış
+          Exec=MEFENSTEIN
+          Icon=mefenstein
+          Type=Application
+          Categories=Game;
+          EOF
+
+          # AppRun
+          cat > AppDir/AppRun << 'EOF'
+          #!/bin/bash
+          SELF=$(readlink -f "$0")
+          HERE=${SELF%/*}
+          exec "$HERE/usr/bin/MEFENSTEIN" "$@"
+          EOF
+          chmod +x AppDir/AppRun
+
+          # appimagetool indir ve AppImage oluştur
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage AppDir MEFENSTEIN-Linux.AppImage
+
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: MEFENSTEIN-Linux
-          path: dist/MEFENSTEIN
+          path: MEFENSTEIN-Linux.AppImage
 
   release:
     needs: [build-macos, build-windows, build-linux]
@@ -141,10 +190,10 @@ jobs:
 
       - name: Rename artifacts
         run: |
-          mv artifacts/macos/MEFENSTEIN artifacts/MEFENSTEIN-macOS
+          mv artifacts/macos/MEFENSTEIN-macOS.dmg artifacts/MEFENSTEIN-macOS.dmg
           mv artifacts/windows/MEFENSTEIN.exe artifacts/MEFENSTEIN-Windows.exe
-          mv artifacts/linux/MEFENSTEIN artifacts/MEFENSTEIN-Linux
-          chmod +x artifacts/MEFENSTEIN-macOS artifacts/MEFENSTEIN-Linux
+          mv artifacts/linux/MEFENSTEIN-Linux.AppImage artifacts/MEFENSTEIN-Linux.AppImage
+          chmod +x artifacts/MEFENSTEIN-Linux.AppImage
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -158,12 +207,11 @@ jobs:
             ### Download
             | Platform | File |
             |----------|------|
-            | 🍎 macOS | `MEFENSTEIN-macOS` |
-            | 🪟 Windows | `MEFENSTEIN-Windows.exe` |
-            | 🐧 Linux | `MEFENSTEIN-Linux` |
+            | 🍎 macOS | `MEFENSTEIN-macOS.dmg` — aç, .app'i Applications'a sürükle |
+            | 🪟 Windows | `MEFENSTEIN-Windows.exe` — direkt çalıştır |
+            | 🐧 Linux | `MEFENSTEIN-Linux.AppImage` — `chmod +x` sonra çift tıkla |
 
-            > **macOS:** İlk çalıştırmada sağ tıklayıp **Aç** seçin.  
-            > **Linux:** `chmod +x MEFENSTEIN-Linux && ./MEFENSTEIN-Linux`
+            > **macOS:** İlk açılışta "bilinmeyen geliştirici" uyarısı gelirse sağ tıklayıp **Aç** seçin.
 
             ### Controls
             | Key | Action |
@@ -175,6 +223,6 @@ jobs:
             | F11 | Fullscreen |
             | ESC | Pause |
           files: |
-            artifacts/MEFENSTEIN-macOS
+            artifacts/MEFENSTEIN-macOS.dmg
             artifacts/MEFENSTEIN-Windows.exe
-            artifacts/MEFENSTEIN-Linux
+            artifacts/MEFENSTEIN-Linux.AppImage
