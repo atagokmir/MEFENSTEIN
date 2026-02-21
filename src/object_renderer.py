@@ -26,10 +26,18 @@ class ObjectRenderer:
         self.draw_minimap()  # Mini harita
 
     def win(self):
-        self.screen.blit(self.win_image, (0, 0))
+        self._blit_fullscreen(self.win_image)
 
     def game_over(self):
-        self.screen.blit(self.game_over_image, (0, 0))
+        self._blit_fullscreen(self.game_over_image)
+
+    def _blit_fullscreen(self, image):
+        sw, sh = self.game.monitor_size
+        if (sw, sh) != RES:
+            scaled = pg.transform.smoothscale(image, (sw, sh))
+            self.game.screen.blit(scaled, (0, 0))
+        else:
+            self.game.screen.blit(image, (0, 0))
 
     def draw_player_health(self):
         health = str(self.game.player.health)

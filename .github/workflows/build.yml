@@ -17,27 +17,38 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install pygame pyinstaller
+        run: pip install pygame pyinstaller
 
-      - name: Build macOS app
+      - name: Convert icon to icns
         run: |
-          pyinstaller --onefile --noconsole \
+          mkdir -p icon.iconset
+          sips -z 16 16   resources/icons/icon.png --out icon.iconset/icon_16x16.png
+          sips -z 32 32   resources/icons/icon.png --out icon.iconset/icon_16x16@2x.png
+          sips -z 32 32   resources/icons/icon.png --out icon.iconset/icon_32x32.png
+          sips -z 64 64   resources/icons/icon.png --out icon.iconset/icon_32x32@2x.png
+          sips -z 128 128 resources/icons/icon.png --out icon.iconset/icon_128x128.png
+          sips -z 256 256 resources/icons/icon.png --out icon.iconset/icon_128x128@2x.png
+          sips -z 256 256 resources/icons/icon.png --out icon.iconset/icon_256x256.png
+          sips -z 512 512 resources/icons/icon.png --out icon.iconset/icon_256x256@2x.png
+          sips -z 512 512 resources/icons/icon.png --out icon.iconset/icon_512x512.png
+          sips -z 1024 1024 resources/icons/icon.png --out icon.iconset/icon_512x512@2x.png
+          iconutil -c icns icon.iconset -o resources/icons/icon.icns
+
+      - name: Build macOS binary
+        run: |
+          pyinstaller --onefile --windowed \
             --name MEFENSTEIN \
+            --icon resources/icons/icon.icns \
             --add-data "resources:resources" \
+            --add-data "src:src" \
             --add-data "settings.py:." \
             main.py
-
-      - name: Zip macOS app
-        run: |
-          cd dist
-          zip -r MEFENSTEIN-macOS.zip MEFENSTEIN
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: MEFENSTEIN-macOS
-          path: dist/MEFENSTEIN-macOS.zip
+          path: dist/MEFENSTEIN
 
   build-windows:
     runs-on: windows-latest
@@ -50,14 +61,15 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install pygame pyinstaller
+        run: pip install pygame pyinstaller pillow
 
       - name: Build Windows exe
         run: |
-          pyinstaller --onefile --noconsole `
+          pyinstaller --onefile --windowed `
             --name MEFENSTEIN `
+            --icon resources/icons/icon.ico `
             --add-data "resources;resources" `
+            --add-data "src;src" `
             --add-data "settings.py;." `
             main.py
 
@@ -67,8 +79,36 @@ jobs:
           name: MEFENSTEIN-Windows
           path: dist/MEFENSTEIN.exe
 
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev
+
+      - name: Install Python dependencies
+        run: pip install pygame pyinstaller
+
+      - name: Build Linux binary
+        run: |
+          pyinstaller --onefile \
+            --name MEFENSTEIN \
+            --add-data "resources:resources" \
+            --add-data "src:src" \
+            --add-data "settings.py:." \
+            main.py
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MEFENSTEIN-Linux
+          path: dist/MEFENSTEIN
+
   release:
-    needs: [build-macos, build-windows]
+    needs: [build-macos, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -77,11 +117,26 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: MEFENSTEIN-macOS
+          path: artifacts/macos
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
           name: MEFENSTEIN-Windows
+          path: artifacts/windows
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: MEFENSTEIN-Linux
+          path: artifacts/linux
+
+      - name: Rename artifacts
+        run: |
+          mv artifacts/macos/MEFENSTEIN artifacts/MEFENSTEIN-macOS
+          mv artifacts/windows/MEFENSTEIN.exe artifacts/MEFENSTEIN-Windows.exe
+          mv artifacts/linux/MEFENSTEIN artifacts/MEFENSTEIN-Linux
+          chmod +x artifacts/MEFENSTEIN-macOS artifacts/MEFENSTEIN-Linux
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -93,21 +148,25 @@ jobs:
             A Wolfenstein-style FPS built from scratch in Python using raycasting.
 
             ### Download
-            - **macOS** → `MEFENSTEIN-macOS.zip` (extract and run)
-            - **Windows** → `MEFENSTEIN.exe` (run directly)
+            | Platform | File |
+            |----------|------|
+            | 🍎 macOS | `MEFENSTEIN-macOS` |
+            | 🪟 Windows | `MEFENSTEIN-Windows.exe` |
+            | 🐧 Linux | `MEFENSTEIN-Linux` |
 
-            ### Requirements
-            No installation needed — standalone executable.
+            > **macOS:** İlk çalıştırmada sağ tıklayıp **Aç** seçin.  
+            > **Linux:** `chmod +x MEFENSTEIN-Linux && ./MEFENSTEIN-Linux`
 
             ### Controls
             | Key | Action |
             |-----|--------|
             | W A S D | Move |
-            | Mouse | Look around |
+            | Mouse | Look |
             | Left Click | Shoot |
             | 1 / 2 | Switch weapon |
-            | ESC | Pause |
             | F11 | Fullscreen |
+            | ESC | Pause |
           files: |
-            MEFENSTEIN-macOS.zip
-            MEFENSTEIN.exe
+            artifacts/MEFENSTEIN-macOS
+            artifacts/MEFENSTEIN-Windows.exe
+            artifacts/MEFENSTEIN-Linux

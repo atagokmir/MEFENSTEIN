@@ -10,6 +10,7 @@ class Menu:
         self.game = game
         self.screen = game.screen
         self.clock = game.clock
+        self.render_surface = pg.Surface((WIDTH, HEIGHT))
         self.font_title = pg.font.Font(None, 120)
         self.font_menu = pg.font.Font(None, 60)
         self.font_small = pg.font.Font(None, 40)
@@ -73,7 +74,7 @@ class Menu:
         for i in range(HEIGHT):
             color_value = int(20 + (i / HEIGHT) * 30)
             color = (color_value // 3, 0, color_value // 2)
-            pg.draw.line(self.screen, color, (0, i), (WIDTH, i))
+            pg.draw.line(self.render_surface, color, (0, i), (WIDTH, i))
         
         # Hareketli yıldızlar
         for star in self.stars:
@@ -85,7 +86,7 @@ class Menu:
             brightness = int(100 + (math.sin(pg.time.get_ticks() * 0.001 + star["x"]) * 50))
             brightness = max(0, min(255, brightness))  # 0-255 arasında sınırla
             color = (brightness, brightness, min(255, int(brightness * 1.2)))
-            pg.draw.circle(self.screen, color, (int(star["x"]), int(star["y"])), star["size"])
+            pg.draw.circle(self.render_surface, color, (int(star["x"]), int(star["y"])), star["size"])
         
         # Periyodik yıldırım efekti
         self.lightning_timer += 1
@@ -99,7 +100,7 @@ class Menu:
                 flash_surface = pg.Surface((WIDTH, HEIGHT))
                 flash_surface.fill((200, 200, 255))
                 flash_surface.set_alpha(flash_alpha)
-                self.screen.blit(flash_surface, (0, 0))
+                self.render_surface.blit(flash_surface, (0, 0))
             else:
                 self.lightning_active = False
 
@@ -115,7 +116,7 @@ class Menu:
         # Gölge efekti
         shadow_text = self.font_title.render("MEFENSTEIN", True, (50, 0, 0))
         shadow_rect = shadow_text.get_rect(center=(WIDTH // 2 + 5, 150 + self.title_offset + 5))
-        self.screen.blit(shadow_text, shadow_rect)
+        self.render_surface.blit(shadow_text, shadow_rect)
         
         # Başlığı ortala
         title_text = "MEFENSTEIN"
@@ -133,32 +134,32 @@ class Menu:
         m_green = int(255 * (1 - blood_factor))
         m_blue = int(255 * (1 - blood_factor))
         m_text = self.font_title.render("M", True, (255, m_green, m_blue))
-        self.screen.blit(m_text, (title_x, title_y))
+        self.render_surface.blit(m_text, (title_x, title_y))
         
         # E - Maviden kırmızıya geçiş
         e_red = int(255 * blood_factor)
         e_green = int(150 * (1 - blood_factor))
         e_blue = int(255 * (1 - blood_factor))
         e_text = self.font_title.render("E", True, (e_red, e_green, e_blue))
-        self.screen.blit(e_text, (title_x + m_width, title_y))
+        self.render_surface.blit(e_text, (title_x + m_width, title_y))
         
         # F - Zaten kırmızı ama daha da koyulaşsın
         f_red = 255
         f_green = int(50 * (1 - blood_factor))
         f_blue = int(50 * (1 - blood_factor))
         f_text = self.font_title.render("F", True, (f_red, f_green, f_blue))
-        self.screen.blit(f_text, (title_x + m_width + e_width, title_y))
+        self.render_surface.blit(f_text, (title_x + m_width + e_width, title_y))
         
         # ENSTEIN - Normal kırmızı
         red_value = min(255, int(200 + self.title_glow))
         enstein_x = title_x + m_width + e_width + f_width
         enstein_text = self.font_title.render("ENSTEIN", True, (red_value, 50, 50))
-        self.screen.blit(enstein_text, (enstein_x, title_y))
+        self.render_surface.blit(enstein_text, (enstein_x, title_y))
         
         # Alt başlık
         subtitle = self.font_small.render("Cehennemden Kaçış", True, (150, 150, 150))
         subtitle_rect = subtitle.get_rect(center=(WIDTH // 2, 220))
-        self.screen.blit(subtitle, subtitle_rect)
+        self.render_surface.blit(subtitle, subtitle_rect)
 
     def draw_menu_items(self):
         """Menü öğelerini çiz"""
@@ -170,7 +171,7 @@ class Menu:
                 # Parlayan çerçeve
                 glow_alpha = abs(math.sin(pg.time.get_ticks() * 0.005)) * 100 + 155
                 border_color = (glow_alpha, 0, 0)
-                pg.draw.rect(self.screen, border_color, 
+                pg.draw.rect(self.render_surface, border_color, 
                            (WIDTH // 2 - 200, menu_y + i * 80 - 35, 400, 70), 3)
                 
                 # Seçili öğe için büyütme efekti
@@ -183,27 +184,27 @@ class Menu:
             
             text = font.render(item["text"], True, color)
             text_rect = text.get_rect(center=(WIDTH // 2, menu_y + i * 80))
-            self.screen.blit(text, text_rect)
+            self.render_surface.blit(text, text_rect)
 
     def draw_settings_menu(self):
         """Ayarlar menüsünü çiz"""
         # Başlık
         title_text = self.font_title.render("AYARLAR", True, (255, 255, 255))
         title_rect = title_text.get_rect(center=(WIDTH // 2, 150))
-        self.screen.blit(title_text, title_rect)
+        self.render_surface.blit(title_text, title_rect)
         
         # Ses ayarı
         sound_text = f"SES: {'AÇIK' if self.sound_enabled else 'KAPALI'}"
         sound_color = (0, 255, 0) if self.sound_enabled else (255, 0, 0)
         sound_render = self.font_menu.render(sound_text, True, sound_color)
         sound_rect = sound_render.get_rect(center=(WIDTH // 2, 300))
-        self.screen.blit(sound_render, sound_rect)
+        self.render_surface.blit(sound_render, sound_rect)
         
         # Ekran modu
         screen_text = f"EKRAN: {'TAM EKRAN' if self.fullscreen else 'PENCERE'}"
         screen_render = self.font_menu.render(screen_text, True, (255, 255, 255))
         screen_rect = screen_render.get_rect(center=(WIDTH // 2, 400))
-        self.screen.blit(screen_render, screen_rect)
+        self.render_surface.blit(screen_render, screen_rect)
         
         # Kontroller
         controls = [
@@ -216,7 +217,7 @@ class Menu:
         for control in controls:
             control_text = self.font_small.render(control, True, (150, 150, 150))
             control_rect = control_text.get_rect(center=(WIDTH // 2, y_pos))
-            self.screen.blit(control_text, control_rect)
+            self.render_surface.blit(control_text, control_rect)
             y_pos += 40
 
     def draw_story_menu(self):
@@ -224,7 +225,7 @@ class Menu:
         # Başlık
         title_text = self.font_title.render("HİKAYE", True, (255, 255, 255))
         title_rect = title_text.get_rect(center=(WIDTH // 2, 100))
-        self.screen.blit(title_text, title_rect)
+        self.render_surface.blit(title_text, title_rect)
         
         # Hikaye metni
         story_lines = [
@@ -256,49 +257,49 @@ class Menu:
                 # İlk kısım
                 if parts[0]:
                     text1 = self.font_small.render(parts[0], True, (200, 200, 200))
-                    self.screen.blit(text1, (x_pos, y_pos))
+                    self.render_surface.blit(text1, (x_pos, y_pos))
                     x_pos += text1.get_width()
                 
                 # MEF - renkli
                 m_text = self.font_small.render("M", True, (255, 255, 255))
-                self.screen.blit(m_text, (x_pos, y_pos))
+                self.render_surface.blit(m_text, (x_pos, y_pos))
                 x_pos += m_text.get_width()
                 
                 e_text = self.font_small.render("E", True, (0, 150, 255))
-                self.screen.blit(e_text, (x_pos, y_pos))
+                self.render_surface.blit(e_text, (x_pos, y_pos))
                 x_pos += e_text.get_width()
                 
                 f_text = self.font_small.render("F", True, (255, 50, 50))
-                self.screen.blit(f_text, (x_pos, y_pos))
+                self.render_surface.blit(f_text, (x_pos, y_pos))
                 x_pos += f_text.get_width()
                 
                 # Son kısım
                 if len(parts) > 1 and parts[1]:
                     text2 = self.font_small.render(parts[1], True, (200, 200, 200))
-                    self.screen.blit(text2, (x_pos, y_pos))
+                    self.render_surface.blit(text2, (x_pos, y_pos))
             else:
                 story_text = self.font_small.render(line, True, (200, 200, 200))
                 story_rect = story_text.get_rect(center=(WIDTH // 2, y_pos))
-                self.screen.blit(story_text, story_rect)
+                self.render_surface.blit(story_text, story_rect)
             
             y_pos += 35
         
         # Geri dön
         back_text = self.font_small.render("ESC - Ana Menüye Dön", True, (150, 150, 150))
         back_rect = back_text.get_rect(center=(WIDTH // 2, HEIGHT - 50))
-        self.screen.blit(back_text, back_rect)
+        self.render_surface.blit(back_text, back_rect)
 
     def draw_footer(self):
         """Alt bilgi çiz"""
         if self.current_menu == "main":
             footer_text = self.font_small.render("↑↓ Seç    ENTER Onayla    ESC Çık", True, (100, 100, 100))
             footer_rect = footer_text.get_rect(center=(WIDTH // 2, HEIGHT - 50))
-            self.screen.blit(footer_text, footer_rect)
+            self.render_surface.blit(footer_text, footer_rect)
         
         # Versiyon
         version_text = self.font_small.render("v1.0 - MEF Edition", True, (80, 80, 80))
         version_rect = version_text.get_rect(bottomright=(WIDTH - 20, HEIGHT - 20))
-        self.screen.blit(version_text, version_rect)
+        self.render_surface.blit(version_text, version_rect)
 
     def toggle_sound(self):
         """Ses ayarını değiştir"""
@@ -310,36 +311,8 @@ class Menu:
 
     def toggle_fullscreen(self):
         """Tam ekran modunu değiştir"""
-        self.fullscreen = not self.fullscreen
-        if self.fullscreen:
-            # Tam ekran modunda monitör çözünürlüğünü al
-            info = pg.display.Info()
-            self.screen = pg.display.set_mode((info.current_w, info.current_h), pg.FULLSCREEN)
-            
-            # Scale faktörünü hesapla
-            self.scale_x = info.current_w / WIDTH
-            self.scale_y = info.current_h / HEIGHT
-            
-            # Aspect ratio'yu koru
-            self.scale = min(self.scale_x, self.scale_y)
-            
-            # Yeni boyutları hesapla
-            self.scaled_width = int(WIDTH * self.scale)
-            self.scaled_height = int(HEIGHT * self.scale)
-            
-            # Ortalama için offset
-            self.offset_x = (info.current_w - self.scaled_width) // 2
-            self.offset_y = (info.current_h - self.scaled_height) // 2
-            
-        else:
-            self.screen = pg.display.set_mode(RES)
-            self.scale = 1
-            self.scaled_width = WIDTH
-            self.scaled_height = HEIGHT
-            self.offset_x = 0
-            self.offset_y = 0
-            
-        self.game.screen = self.screen
+        self.game.toggle_fullscreen()
+        self.fullscreen = self.game.fullscreen
 
     def handle_input(self):
         """Kullanıcı girişlerini işle"""
@@ -412,6 +385,7 @@ class Menu:
                 return "new_game"
             
             # Menüyü çiz
+            self.render_surface.fill((0, 0, 0))
             self.draw_background()
             
             if self.current_menu == "main":
@@ -423,6 +397,15 @@ class Menu:
             elif self.current_menu == "story":
                 self.draw_story_menu()
             
+            self.screen = self.game.screen
+            self.screen.fill((0, 0, 0))
+            sw, sh = self.game.monitor_size
+            if (sw, sh) != RES:
+                scaled = pg.transform.smoothscale(self.render_surface, (sw, sh))
+                self.screen.blit(scaled, (0, 0))
+            else:
+                self.screen.blit(self.render_surface, (0, 0))
+            
             pg.display.flip()
             self.clock.tick(60)
 
@@ -431,23 +414,25 @@ class PauseMenu:
     """Oyun içi duraklatma menüsü"""
     def __init__(self, game):
         self.game = game
-        self.screen = game.screen
         self.font = pg.font.Font(None, 80)
         self.font_small = pg.font.Font(None, 50)
         
     def draw(self):
+        screen = self.game.screen
+        sw, sh = self.game.monitor_size
+
         # Yarı saydam arka plan
-        overlay = pg.Surface((WIDTH, HEIGHT))
+        overlay = pg.Surface((sw, sh))
         overlay.fill((0, 0, 0))
         overlay.set_alpha(180)
-        self.screen.blit(overlay, (0, 0))
-        
+        screen.blit(overlay, (0, 0))
+
         # PAUSED yazısı
         pause_text = self.font.render("DURAKLADI", True, (255, 255, 255))
-        pause_rect = pause_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
-        self.screen.blit(pause_text, pause_rect)
-        
+        pause_rect = pause_text.get_rect(center=(sw // 2, sh // 2 - 50))
+        screen.blit(pause_text, pause_rect)
+
         # İpucu
         hint_text = self.font_small.render("ESC - Devam Et    Q - Ana Menüye Dön", True, (200, 200, 200))
-        hint_rect = hint_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
-        self.screen.blit(hint_text, hint_rect)
+        hint_rect = hint_text.get_rect(center=(sw // 2, sh // 2 + 50))
+        screen.blit(hint_text, hint_rect)

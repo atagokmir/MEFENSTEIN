@@ -1,5 +1,13 @@
 import sys
-sys.path.insert(0, 'src')
+import os
+
+if getattr(sys, 'frozen', False):
+    # PyInstaller bundle içinde çalışıyor
+    base_path = sys._MEIPASS
+    sys.path.insert(0, os.path.join(base_path, 'src'))
+else:
+    # Normal Python
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 import pygame as pg
 from settings import *
@@ -31,11 +39,11 @@ class Game:
         self.paused = False
         self.pause_menu = PauseMenu(self)
         self.fullscreen = False
+        self.monitor_size = RES
 
         self.show_menu()
 
     def center_window(self):
-        import os
         os.environ['SDL_VIDEO_WINDOW_POS'] = 'centered'
         pg.display.set_caption('MEFENSTEIN - Cehennemden Kaçış')
 
@@ -64,11 +72,11 @@ class Game:
 
     def toggle_fullscreen(self):
         self.fullscreen = not self.fullscreen
-
         if self.fullscreen:
-            info = pg.display.Info()
-            self.screen = pg.display.set_mode((info.current_w, info.current_h), pg.FULLSCREEN)
+            self.screen = pg.display.set_mode((0, 0), pg.FULLSCREEN)
+            self.monitor_size = self.screen.get_size()
         else:
+            self.monitor_size = RES
             self.screen = pg.display.set_mode(RES)
             self.center_window()
 
@@ -83,34 +91,18 @@ class Game:
         pg.display.set_caption(f'MEFENSTEIN - FPS: {self.clock.get_fps():.1f}')
 
     def draw(self):
+        self.screen.fill((0, 0, 0))
         self.render_surface.fill((0, 0, 0))
 
-        original_screen = self.object_renderer.screen
         self.object_renderer.screen = self.render_surface
+        self.object_renderer.draw()
+        self.render_surface.blit(self.weapon.images[0], self.weapon.weapon_pos)
 
-        if not self.paused:
-            self.object_renderer.draw()
-            self.render_surface.blit(self.weapon.images[0], self.weapon.weapon_pos)
-
-        self.object_renderer.screen = original_screen
-
-        if self.fullscreen:
-            info = pg.display.Info()
-            monitor_w = info.current_w
-            monitor_h = info.current_h
-
-            scale_x = monitor_w / WIDTH
-            scale_y = monitor_h / HEIGHT
-            scale = max(scale_x, scale_y)
-
-            new_width = int(WIDTH * scale)
-            new_height = int(HEIGHT * scale)
-
-            x_offset = (monitor_w - new_width) // 2
-            y_offset = (monitor_h - new_height) // 2
-
-            scaled = pg.transform.smoothscale(self.render_surface, (new_width, new_height))
-            self.screen.blit(scaled, (x_offset, y_offset))
+        # render_surface'i ekrana scale et
+        sw, sh = self.monitor_size
+        if (sw, sh) != RES:
+            scaled = pg.transform.smoothscale(self.render_surface, (sw, sh))
+            self.screen.blit(scaled, (0, 0))
         else:
             self.screen.blit(self.render_surface, (0, 0))
 

@@ -6,27 +6,27 @@ class Weapon(AnimatedSprite):
         self.game = game
         self.weapon_type = weapon_type
         
-        # Silah özellikleri
+        # Sabit hedef yükseklik — her silah aynı boyutta görünür
         self.weapons = {
             'shotgun': {
                 'path': 'resources/sprites/weapon/shotgun/0.png',
-                'scale': 0.4,
+                'target_height': 180,
                 'animation_time': 90,
                 'damage': 50,
                 'ammo_cost': 1,
                 'range': 5,
                 'spread': True,
-                'fire_rate': 90  # ms
+                'fire_rate': 90
             },
             'rifle': {
-                'path': 'resources/sprites/weapon/shotgun/0.png',  # Geçici olarak shotgun sprite'ı
-                'scale': 0.35,
+                'path': 'resources/sprites/weapon/rifle/0.png',
+                'target_height': 180,
                 'animation_time': 60,
                 'damage': 25,
                 'ammo_cost': 1,
                 'range': 10,
                 'spread': False,
-                'fire_rate': 60  # ms - daha hızlı ateş
+                'fire_rate': 60
             }
         }
         
@@ -35,15 +35,14 @@ class Weapon(AnimatedSprite):
         
         # Sprite'ı başlat
         super().__init__(
-            game=game, 
-            path=self.current_weapon['path'], 
-            scale=self.current_weapon['scale'], 
+            game=game,
+            path=self.current_weapon['path'],
+            scale=1,
             animation_time=self.current_weapon['animation_time']
         )
         
         self.images = deque(
-            [pg.transform.smoothscale(img, (self.image.get_width() * self.current_weapon['scale'], 
-                                          self.image.get_height() * self.current_weapon['scale']))
+            [self._scale_image(img, self.current_weapon['target_height'])
              for img in self.images])
         
         self.weapon_pos = (HALF_WIDTH - self.images[0].get_width() // 2, HEIGHT - self.images[0].get_height())
@@ -56,6 +55,12 @@ class Weapon(AnimatedSprite):
         self.ammo_cost = self.current_weapon['ammo_cost']
         self.fire_rate = self.current_weapon['fire_rate']
         self.last_shot_time = 0
+
+    def _scale_image(self, img, target_height):
+        """Görseli hedef yüksekliğe orantılı scale et"""
+        ratio = img.get_width() / img.get_height()
+        target_width = int(target_height * ratio)
+        return pg.transform.smoothscale(img, (target_width, target_height))
 
     def switch_weapon(self, weapon_type):
         """Silah değiştir"""
@@ -73,9 +78,12 @@ class Weapon(AnimatedSprite):
             self.path = self.current_weapon['path']
             self.images = self.get_images(self.path.rsplit('/', 1)[0])
             self.images = deque(
-                [pg.transform.smoothscale(img, (img.get_width() * self.current_weapon['scale'], 
-                                              img.get_height() * self.current_weapon['scale']))
+                [self._scale_image(img, self.current_weapon['target_height'])
                  for img in self.images])
+            
+            self.num_images = len(self.images)
+            self.frame_counter = 0
+            self.reloading = False
             
             self.weapon_pos = (HALF_WIDTH - self.images[0].get_width() // 2, HEIGHT - self.images[0].get_height())
             self.image = self.images[0]
