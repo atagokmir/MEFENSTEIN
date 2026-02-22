@@ -181,13 +181,15 @@ jobs:
 
   build-linux-arm:
     runs-on: ubuntu-24.04-arm
+    # Debian Bullseye (glibc 2.31) kullan — Pi OS Bullseye/Bookworm ile uyumlu
+    container: python:3.11-slim-bullseye
     steps:
       - uses: actions/checkout@v4
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pip libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev libfuse2
+          apt-get update
+          apt-get install -y libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev
 
       - name: Install Python dependencies
         run: pip install pygame pyinstaller
@@ -207,7 +209,6 @@ jobs:
           mkdir -p deb/usr/bin
           mkdir -p deb/usr/share/applications
           mkdir -p deb/usr/share/icons/hicolor/256x256/apps
-          mkdir -p deb/usr/share/mefenstein
 
           cp dist/MEFENSTEIN deb/usr/bin/mefenstein
           chmod +x deb/usr/bin/mefenstein
@@ -216,6 +217,14 @@ jobs:
           printf 'Package: mefenstein\nVersion: 1.0\nArchitecture: arm64\nMaintainer: Ata Gokmir Cetinel\nDepends: libsdl2-2.0-0, libsdl2-mixer-2.0-0, libsdl2-image-2.0-0\nDescription: MEFENSTEIN - Cehennemden Kacis\n A Wolfenstein-style FPS built from scratch in Python using raycasting.\n' > deb/DEBIAN/control
 
           printf '[Desktop Entry]\nName=MEFENSTEIN\nComment=Cehennemden Kaçış\nExec=/usr/bin/mefenstein\nIcon=mefenstein\nType=Application\nCategories=Game;\nTerminal=false\n' > deb/usr/share/applications/mefenstein.desktop
+
+          # Kurulum sonrası ikon önbelleğini güncelle
+          printf '#!/bin/bash\ngtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true\nupdate-desktop-database /usr/share/applications 2>/dev/null || true\n' > deb/DEBIAN/postinst
+          chmod 755 deb/DEBIAN/postinst
+
+          # Kaldırma sonrası ikon önbelleğini temizle (hayalet ikon kalmasın)
+          printf '#!/bin/bash\ngtk-update-icon-cache -f -t /usr/share/icons/hicolor 2>/dev/null || true\nupdate-desktop-database /usr/share/applications 2>/dev/null || true\n' > deb/DEBIAN/postrm
+          chmod 755 deb/DEBIAN/postrm
 
           dpkg-deb --build deb MEFENSTEIN-Linux-ARM.deb
 
