@@ -173,32 +173,36 @@ jobs:
             --add-data "settings.py:." \
             main.py
 
-      - name: Create ARM AppImage
+      - name: Create DEB package
         run: |
-          mkdir -p AppDir/usr/bin
-          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-          mkdir -p AppDir/usr/share/applications
+          mkdir -p deb/DEBIAN
+          mkdir -p deb/usr/bin
+          mkdir -p deb/usr/share/applications
+          mkdir -p deb/usr/share/icons/hicolor/256x256/apps
+          mkdir -p deb/usr/share/mefenstein
 
-          cp dist/MEFENSTEIN AppDir/usr/bin/MEFENSTEIN
-          chmod +x AppDir/usr/bin/MEFENSTEIN
-          cp resources/icons/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/mefenstein.png
-          cp resources/icons/icon.png AppDir/mefenstein.png
+          cp dist/MEFENSTEIN deb/usr/bin/mefenstein
+          chmod +x deb/usr/bin/mefenstein
+          cp resources/icons/icon.png deb/usr/share/icons/hicolor/256x256/apps/mefenstein.png
 
-          printf '[Desktop Entry]\nName=MEFENSTEIN\nComment=Cehennemden Kaçış\nExec=MEFENSTEIN\nIcon=mefenstein\nType=Application\nCategories=Game;\n' > AppDir/mefenstein.desktop
-          cp AppDir/mefenstein.desktop AppDir/usr/share/applications/mefenstein.desktop
+          cat > deb/DEBIAN/control << EOF
+Package: mefenstein
+Version: 1.0
+Architecture: arm64
+Maintainer: Ata Gökmir Çetinel
+Description: MEFENSTEIN - Cehennemden Kaçış
+ A Wolfenstein-style FPS built from scratch in Python using raycasting.
+EOF
 
-          printf '#!/bin/bash\nSELF=$(readlink -f "$0")\nHERE=${SELF%%/*}\nexport PATH="$HERE/usr/bin:$PATH"\nexec "$HERE/usr/bin/MEFENSTEIN" "$@"\n' > AppDir/AppRun
-          chmod +x AppDir/AppRun
+          printf '[Desktop Entry]\nName=MEFENSTEIN\nComment=Cehennemden Kaçış\nExec=/usr/bin/mefenstein\nIcon=mefenstein\nType=Application\nCategories=Game;\nTerminal=false\n' > deb/usr/share/applications/mefenstein.desktop
 
-          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage
-          chmod +x appimagetool-aarch64.AppImage
-          ARCH=aarch64 ./appimagetool-aarch64.AppImage --no-appstream AppDir MEFENSTEIN-Linux-ARM.AppImage
+          dpkg-deb --build deb MEFENSTEIN-Linux-ARM.deb
 
       - name: Upload Linux ARM artifact
         uses: actions/upload-artifact@v4
         with:
           name: MEFENSTEIN-Linux-ARM
-          path: MEFENSTEIN-Linux-ARM.AppImage
+          path: MEFENSTEIN-Linux-ARM.deb
 
   release:
     needs: [build-macos, build-windows, build-linux, build-linux-arm]
@@ -235,8 +239,8 @@ jobs:
           mv artifacts/macos/MEFENSTEIN-macOS.dmg artifacts/MEFENSTEIN-macOS.dmg
           mv artifacts/windows/MEFENSTEIN.exe artifacts/MEFENSTEIN-Windows.exe
           mv artifacts/linux-x86_64/MEFENSTEIN-Linux-x86_64.AppImage artifacts/MEFENSTEIN-Linux-x86_64.AppImage
-          mv artifacts/linux-arm/MEFENSTEIN-Linux-ARM.AppImage artifacts/MEFENSTEIN-Linux-ARM.AppImage
-          chmod +x artifacts/MEFENSTEIN-Linux-x86_64.AppImage artifacts/MEFENSTEIN-Linux-ARM.AppImage
+          mv artifacts/linux-arm/MEFENSTEIN-Linux-ARM.deb artifacts/MEFENSTEIN-Linux-ARM.deb
+          chmod +x artifacts/MEFENSTEIN-Linux-x86_64.AppImage
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -253,7 +257,7 @@ jobs:
             | 🍎 macOS | `MEFENSTEIN-macOS.dmg` — aç, .app'i Applications'a sürükle |
             | 🪟 Windows | `MEFENSTEIN-Windows.exe` — direkt çalıştır |
             | 🐧 Linux (x86_64) | `MEFENSTEIN-Linux-x86_64.AppImage` — `chmod +x` sonra çalıştır |
-            | 🐧 Linux (ARM / Raspberry Pi) | `MEFENSTEIN-Linux-ARM.AppImage` — `chmod +x` sonra çalıştır |
+            | 🐧 Linux (ARM / Raspberry Pi) | `MEFENSTEIN-Linux-ARM.deb` — çift tıkla, "Kur" butonuna bas |
 
             > **macOS:** İlk açılışta "bilinmeyen geliştirici" uyarısı gelirse sağ tıklayıp **Aç** seçin.
 
@@ -270,4 +274,4 @@ jobs:
             artifacts/MEFENSTEIN-macOS.dmg
             artifacts/MEFENSTEIN-Windows.exe
             artifacts/MEFENSTEIN-Linux-x86_64.AppImage
-            artifacts/MEFENSTEIN-Linux-ARM.AppImage
+            artifacts/MEFENSTEIN-Linux-ARM.deb
