@@ -136,15 +136,7 @@ jobs:
           cp resources/icons/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/mefenstein.png
           cp resources/icons/icon.png AppDir/mefenstein.png
 
-          cat > AppDir/mefenstein.desktop << EOF
-[Desktop Entry]
-Name=MEFENSTEIN
-Comment=Cehennemden Kaçış
-Exec=MEFENSTEIN
-Icon=mefenstein
-Type=Application
-Categories=Game;
-EOF
+          printf '[Desktop Entry]\nName=MEFENSTEIN\nComment=Cehennemden Kaçış\nExec=MEFENSTEIN\nIcon=mefenstein\nType=Application\nCategories=Game;\n' > AppDir/mefenstein.desktop
 
           cp AppDir/mefenstein.desktop AppDir/usr/share/applications/mefenstein.desktop
 
