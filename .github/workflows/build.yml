@@ -140,13 +140,7 @@ jobs:
 
           cp AppDir/mefenstein.desktop AppDir/usr/share/applications/mefenstein.desktop
 
-          cat > AppDir/AppRun << EOF
-#!/bin/bash
-SELF=\$(readlink -f "\$0")
-HERE=\${SELF%/*}
-export PATH="\$HERE/usr/bin:\$PATH"
-exec "\$HERE/usr/bin/MEFENSTEIN" "\$@"
-EOF
+          printf '#!/bin/bash\nSELF=$(readlink -f "$0")\nHERE=${SELF%%/*}\nexport PATH="$HERE/usr/bin:$PATH"\nexec "$HERE/usr/bin/MEFENSTEIN" "$@"\n' > AppDir/AppRun
           chmod +x AppDir/AppRun
 
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
