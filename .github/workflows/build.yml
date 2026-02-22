@@ -185,14 +185,7 @@ jobs:
           chmod +x deb/usr/bin/mefenstein
           cp resources/icons/icon.png deb/usr/share/icons/hicolor/256x256/apps/mefenstein.png
 
-          cat > deb/DEBIAN/control << EOF
-Package: mefenstein
-Version: 1.0
-Architecture: arm64
-Maintainer: Ata Gökmir Çetinel
-Description: MEFENSTEIN - Cehennemden Kaçış
- A Wolfenstein-style FPS built from scratch in Python using raycasting.
-EOF
+          printf 'Package: mefenstein\nVersion: 1.0\nArchitecture: arm64\nMaintainer: Ata Gokmir Cetinel\nDescription: MEFENSTEIN - Cehennemden Kacis\n A Wolfenstein-style FPS built from scratch in Python using raycasting.\n' > deb/DEBIAN/control
 
           printf '[Desktop Entry]\nName=MEFENSTEIN\nComment=Cehennemden Kaçış\nExec=/usr/bin/mefenstein\nIcon=mefenstein\nType=Application\nCategories=Game;\nTerminal=false\n' > deb/usr/share/applications/mefenstein.desktop
 
