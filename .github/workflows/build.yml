@@ -52,6 +52,33 @@ jobs:
             --add-data "settings.py:." \
             main.py
 
+      - name: Create DMG background
+        run: |
+          python3 << 'PYEOF'
+          from PIL import Image, ImageDraw
+
+          W, H = 540, 380
+          img = Image.new('RGB', (W, H), (20, 20, 28))
+          draw = ImageDraw.Draw(img)
+
+          # Subtle gradient
+          for i in range(H):
+              v = int(20 + (i / H) * 12)
+              draw.line([(0, i), (W, i)], fill=(v, v, v + 8))
+
+          # Arrow from app (center 135,190) to Applications (center 405,190)
+          ax, ay = 215, 190  # arrow start x
+          bx = 325           # arrow end x
+          shaft_h = 8
+          draw.rectangle([ax, ay - shaft_h // 2, bx - 18, ay + shaft_h // 2],
+                         fill=(140, 140, 170))
+          draw.polygon([(bx, ay), (bx - 22, ay - 14), (bx - 22, ay + 14)],
+                       fill=(140, 140, 170))
+
+          img.save('dmg_background.png')
+          print("Background created")
+          PYEOF
+
       - name: Create DMG
         run: |
           brew install create-dmg
@@ -64,6 +91,7 @@ jobs:
             --icon "MEFENSTEIN.app" 135 190 \
             --hide-extension "MEFENSTEIN.app" \
             --app-drop-link 405 190 \
+            --background "dmg_background.png" \
             "MEFENSTEIN-macOS.dmg" \
             "dist/MEFENSTEIN.app"
 
@@ -185,7 +213,7 @@ jobs:
           chmod +x deb/usr/bin/mefenstein
           cp resources/icons/icon.png deb/usr/share/icons/hicolor/256x256/apps/mefenstein.png
 
-          printf 'Package: mefenstein\nVersion: 1.0\nArchitecture: arm64\nMaintainer: Ata Gokmir Cetinel\nDescription: MEFENSTEIN - Cehennemden Kacis\n A Wolfenstein-style FPS built from scratch in Python using raycasting.\n' > deb/DEBIAN/control
+          printf 'Package: mefenstein\nVersion: 1.0\nArchitecture: arm64\nMaintainer: Ata Gokmir Cetinel\nDepends: libsdl2-2.0-0, libsdl2-mixer-2.0-0, libsdl2-image-2.0-0\nDescription: MEFENSTEIN - Cehennemden Kacis\n A Wolfenstein-style FPS built from scratch in Python using raycasting.\n' > deb/DEBIAN/control
 
           printf '[Desktop Entry]\nName=MEFENSTEIN\nComment=Cehennemden Kaçış\nExec=/usr/bin/mefenstein\nIcon=mefenstein\nType=Application\nCategories=Game;\nTerminal=false\n' > deb/usr/share/applications/mefenstein.desktop
 

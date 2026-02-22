@@ -4,10 +4,13 @@ import os
 if getattr(sys, 'frozen', False):
     # PyInstaller bundle içinde çalışıyor
     base_path = sys._MEIPASS
-    sys.path.insert(0, os.path.join(base_path, 'src'))
 else:
     # Normal Python
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+    base_path = os.path.dirname(os.path.abspath(__file__))
+
+# Kaynak dosyalarının doğru yüklenmesi için CWD'yi ayarla
+os.chdir(base_path)
+sys.path.insert(0, os.path.join(base_path, 'src'))
 
 import pygame as pg
 from settings import *
