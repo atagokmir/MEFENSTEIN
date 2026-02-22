@@ -58,14 +58,15 @@ jobs:
           create-dmg \
             --volname "MEFENSTEIN" \
             --volicon "resources/icons/icon.icns" \
+            --background "resources/icons/icon.png" \
             --window-pos 200 120 \
-            --window-size 600 400 \
+            --window-size 660 400 \
             --icon-size 128 \
-            --icon "MEFENSTEIN.app" 150 180 \
+            --icon "MEFENSTEIN.app" 165 200 \
             --hide-extension "MEFENSTEIN.app" \
-            --app-drop-link 450 180 \
+            --app-drop-link 495 200 \
             "MEFENSTEIN-macOS.dmg" \
-            "dist/"
+            "dist/MEFENSTEIN.app"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
@@ -110,7 +111,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev fuse libfuse2
+          sudo apt-get install -y python3-pip libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev
 
       - name: Install Python dependencies
         run: pip install pygame pyinstaller
@@ -126,37 +127,39 @@ jobs:
 
       - name: Create AppImage
         run: |
-          # AppImage yapısını oluştur
           mkdir -p AppDir/usr/bin
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+          mkdir -p AppDir/usr/share/applications
+
           cp dist/MEFENSTEIN AppDir/usr/bin/MEFENSTEIN
+          chmod +x AppDir/usr/bin/MEFENSTEIN
           cp resources/icons/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/mefenstein.png
           cp resources/icons/icon.png AppDir/mefenstein.png
 
-          # .desktop dosyası
-          cat > AppDir/mefenstein.desktop << 'EOF'
-          [Desktop Entry]
-          Name=MEFENSTEIN
-          Comment=Cehennemden Kaçış
-          Exec=MEFENSTEIN
-          Icon=mefenstein
-          Type=Application
-          Categories=Game;
-          EOF
+          cat > AppDir/mefenstein.desktop << EOF
+[Desktop Entry]
+Name=MEFENSTEIN
+Comment=Cehennemden Kaçış
+Exec=MEFENSTEIN
+Icon=mefenstein
+Type=Application
+Categories=Game;
+EOF
 
-          # AppRun
-          cat > AppDir/AppRun << 'EOF'
-          #!/bin/bash
-          SELF=$(readlink -f "$0")
-          HERE=${SELF%/*}
-          exec "$HERE/usr/bin/MEFENSTEIN" "$@"
-          EOF
+          cp AppDir/mefenstein.desktop AppDir/usr/share/applications/mefenstein.desktop
+
+          cat > AppDir/AppRun << EOF
+#!/bin/bash
+SELF=\$(readlink -f "\$0")
+HERE=\${SELF%/*}
+export PATH="\$HERE/usr/bin:\$PATH"
+exec "\$HERE/usr/bin/MEFENSTEIN" "\$@"
+EOF
           chmod +x AppDir/AppRun
 
-          # appimagetool indir ve AppImage oluştur
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
-          ARCH=x86_64 ./appimagetool-x86_64.AppImage AppDir MEFENSTEIN-Linux.AppImage
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage --no-appstream AppDir MEFENSTEIN-Linux.AppImage
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
