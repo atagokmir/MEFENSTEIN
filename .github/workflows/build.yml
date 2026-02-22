@@ -58,13 +58,12 @@ jobs:
           create-dmg \
             --volname "MEFENSTEIN" \
             --volicon "resources/icons/icon.icns" \
-            --background "resources/icons/icon.png" \
             --window-pos 200 120 \
-            --window-size 660 400 \
+            --window-size 540 380 \
             --icon-size 128 \
-            --icon "MEFENSTEIN.app" 165 200 \
+            --icon "MEFENSTEIN.app" 135 190 \
             --hide-extension "MEFENSTEIN.app" \
-            --app-drop-link 495 200 \
+            --app-drop-link 405 190 \
             "MEFENSTEIN-macOS.dmg" \
             "dist/MEFENSTEIN.app"
 
@@ -137,7 +136,6 @@ jobs:
           cp resources/icons/icon.png AppDir/mefenstein.png
 
           printf '[Desktop Entry]\nName=MEFENSTEIN\nComment=Cehennemden Kaçış\nExec=MEFENSTEIN\nIcon=mefenstein\nType=Application\nCategories=Game;\n' > AppDir/mefenstein.desktop
-
           cp AppDir/mefenstein.desktop AppDir/usr/share/applications/mefenstein.desktop
 
           printf '#!/bin/bash\nSELF=$(readlink -f "$0")\nHERE=${SELF%%/*}\nexport PATH="$HERE/usr/bin:$PATH"\nexec "$HERE/usr/bin/MEFENSTEIN" "$@"\n' > AppDir/AppRun
@@ -145,16 +143,65 @@ jobs:
 
           wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
-          ARCH=x86_64 ./appimagetool-x86_64.AppImage --no-appstream AppDir MEFENSTEIN-Linux.AppImage
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage --no-appstream AppDir MEFENSTEIN-Linux-x86_64.AppImage
 
-      - name: Upload Linux artifact
+      - name: Upload Linux x86_64 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MEFENSTEIN-Linux
-          path: MEFENSTEIN-Linux.AppImage
+          name: MEFENSTEIN-Linux-x86_64
+          path: MEFENSTEIN-Linux-x86_64.AppImage
+
+  build-linux-arm:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pip libsdl2-dev libsdl2-mixer-dev libsdl2-image-dev libfuse2
+
+      - name: Install Python dependencies
+        run: pip install pygame pyinstaller
+
+      - name: Build Linux ARM binary
+        run: |
+          pyinstaller --onefile \
+            --name MEFENSTEIN \
+            --add-data "resources:resources" \
+            --add-data "src:src" \
+            --add-data "settings.py:." \
+            main.py
+
+      - name: Create ARM AppImage
+        run: |
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+          mkdir -p AppDir/usr/share/applications
+
+          cp dist/MEFENSTEIN AppDir/usr/bin/MEFENSTEIN
+          chmod +x AppDir/usr/bin/MEFENSTEIN
+          cp resources/icons/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/mefenstein.png
+          cp resources/icons/icon.png AppDir/mefenstein.png
+
+          printf '[Desktop Entry]\nName=MEFENSTEIN\nComment=Cehennemden Kaçış\nExec=MEFENSTEIN\nIcon=mefenstein\nType=Application\nCategories=Game;\n' > AppDir/mefenstein.desktop
+          cp AppDir/mefenstein.desktop AppDir/usr/share/applications/mefenstein.desktop
+
+          printf '#!/bin/bash\nSELF=$(readlink -f "$0")\nHERE=${SELF%%/*}\nexport PATH="$HERE/usr/bin:$PATH"\nexec "$HERE/usr/bin/MEFENSTEIN" "$@"\n' > AppDir/AppRun
+          chmod +x AppDir/AppRun
+
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage
+          chmod +x appimagetool-aarch64.AppImage
+          ARCH=aarch64 ./appimagetool-aarch64.AppImage --no-appstream AppDir MEFENSTEIN-Linux-ARM.AppImage
+
+      - name: Upload Linux ARM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MEFENSTEIN-Linux-ARM
+          path: MEFENSTEIN-Linux-ARM.AppImage
 
   release:
-    needs: [build-macos, build-windows, build-linux]
+    needs: [build-macos, build-windows, build-linux, build-linux-arm]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -171,18 +218,25 @@ jobs:
           name: MEFENSTEIN-Windows
           path: artifacts/windows
 
-      - name: Download Linux artifact
+      - name: Download Linux x86_64 artifact
         uses: actions/download-artifact@v4
         with:
-          name: MEFENSTEIN-Linux
-          path: artifacts/linux
+          name: MEFENSTEIN-Linux-x86_64
+          path: artifacts/linux-x86_64
+
+      - name: Download Linux ARM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: MEFENSTEIN-Linux-ARM
+          path: artifacts/linux-arm
 
       - name: Rename artifacts
         run: |
           mv artifacts/macos/MEFENSTEIN-macOS.dmg artifacts/MEFENSTEIN-macOS.dmg
           mv artifacts/windows/MEFENSTEIN.exe artifacts/MEFENSTEIN-Windows.exe
-          mv artifacts/linux/MEFENSTEIN-Linux.AppImage artifacts/MEFENSTEIN-Linux.AppImage
-          chmod +x artifacts/MEFENSTEIN-Linux.AppImage
+          mv artifacts/linux-x86_64/MEFENSTEIN-Linux-x86_64.AppImage artifacts/MEFENSTEIN-Linux-x86_64.AppImage
+          mv artifacts/linux-arm/MEFENSTEIN-Linux-ARM.AppImage artifacts/MEFENSTEIN-Linux-ARM.AppImage
+          chmod +x artifacts/MEFENSTEIN-Linux-x86_64.AppImage artifacts/MEFENSTEIN-Linux-ARM.AppImage
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -198,7 +252,8 @@ jobs:
             |----------|------|
             | 🍎 macOS | `MEFENSTEIN-macOS.dmg` — aç, .app'i Applications'a sürükle |
             | 🪟 Windows | `MEFENSTEIN-Windows.exe` — direkt çalıştır |
-            | 🐧 Linux | `MEFENSTEIN-Linux.AppImage` — `chmod +x` sonra çift tıkla |
+            | 🐧 Linux (x86_64) | `MEFENSTEIN-Linux-x86_64.AppImage` — `chmod +x` sonra çalıştır |
+            | 🐧 Linux (ARM / Raspberry Pi) | `MEFENSTEIN-Linux-ARM.AppImage` — `chmod +x` sonra çalıştır |
 
             > **macOS:** İlk açılışta "bilinmeyen geliştirici" uyarısı gelirse sağ tıklayıp **Aç** seçin.
 
@@ -214,4 +269,5 @@ jobs:
           files: |
             artifacts/MEFENSTEIN-macOS.dmg
             artifacts/MEFENSTEIN-Windows.exe
-            artifacts/MEFENSTEIN-Linux.AppImage
+            artifacts/MEFENSTEIN-Linux-x86_64.AppImage
+            artifacts/MEFENSTEIN-Linux-ARM.AppImage
